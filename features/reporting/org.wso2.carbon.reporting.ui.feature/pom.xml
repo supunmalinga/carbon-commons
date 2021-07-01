@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.wso2.carbon.commons</groupId>
         <artifactId>reporting-features</artifactId>
-        <version>4.5.0-SNAPSHOT</version>
+        <version>4.7.39-SNAPSHOT</version>
 	<relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -49,7 +49,7 @@
             <artifactId>org.wso2.carbon.reporting.util</artifactId>
         </dependency>
         <dependency>
-            <groupId>jasperreports.wso2</groupId>
+            <groupId>org.wso2.orbit.net.sf.jasperreports</groupId>
             <artifactId>jasperreports</artifactId>
         </dependency>
         <dependency>
@@ -79,6 +79,10 @@
         <dependency>
             <groupId>jfree.wso2</groupId>
             <artifactId>jfreechart</artifactId>
+        </dependency>
+        <dependency>
+	        <groupId>xalan.wso2</groupId>
+	        <artifactId>xalan</artifactId>
         </dependency>
     </dependencies>
 
@@ -115,10 +119,12 @@
                                 </bundleDef>
                                 <bundleDef>org.wso2.carbon:org.wso2.carbon.ui.menu.tools:${carbon.kernel.version}
                                 </bundleDef>
+
                             </bundles>
                             <importBundles>
-                                <importBundleDef>jasperreports.wso2:jasperreports</importBundleDef>
-                                <importBundleDef>jxl.wso2:jxl</importBundleDef>
+                                <importBundleDef>org.wso2.orbit.net.sf.jasperreports:jasperreports</importBundleDef>
+				 <importBundleDef>xalan.wso2:xalan</importBundleDef>
+				 <importBundleDef>jxl.wso2:jxl</importBundleDef>
                                 <importBundleDef>com.lowagie.wso2:itext</importBundleDef>
                                 <importBundleDef>commons-beanutils.wso2:commons-beanutils</importBundleDef>
                                 <importBundleDef>commons-digester.wso2:commons-digester</importBundleDef>
@@ -126,7 +132,7 @@
                                 <importBundleDef>jfree.wso2:jfreechart</importBundleDef>
                             </importBundles>
                             <importFeatures>
-                                <importFeatureDef>org.wso2.carbon.core.ui:${carbon.kernel.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.core.ui:compatible:${carbon.kernel.feature.version}</importFeatureDef>
                                 <!--<importFeatureDef>org.wso2.carbon.ndatasource.ui:${project.version}</importFeatureDef>-->
                             </importFeatures>
                         </configuration>

@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.wso2.carbon.commons</groupId>
         <artifactId>reporting</artifactId>
-        <version>4.5.0-SNAPSHOT</version>
+        <version>4.7.39-SNAPSHOT</version>
 	<relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -38,11 +38,11 @@
             <artifactId>org.wso2.carbon.reporting.api</artifactId>
         </dependency>
         <dependency>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
+            <groupId>org.ops4j.pax.logging</groupId>
+            <artifactId>pax-logging-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>jasperreports.wso2</groupId>
+            <groupId>org.wso2.orbit.net.sf.jasperreports</groupId>
             <artifactId>jasperreports</artifactId>
             <exclusions>
                 <exclusion>
@@ -60,18 +60,19 @@
             <artifactId>opencsv</artifactId>
             <version>${opencsv.reporting.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-           <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-scr-plugin</artifactId>
-           </plugin>
+
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>1.4.0</version> 
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>

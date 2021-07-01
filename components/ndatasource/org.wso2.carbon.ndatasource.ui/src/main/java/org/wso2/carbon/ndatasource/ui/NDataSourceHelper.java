@@ -17,6 +17,9 @@ package org.wso2.carbon.ndatasource.ui;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.xerces.impl.Constants;
+import org.apache.xerces.util.SecurityManager;
+import org.owasp.encoder.Encode;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -34,20 +37,25 @@ import org.wso2.carbon.ndatasource.ui.stub.core.xsd.JNDIConfig_EnvEntry;
 import org.wso2.carbon.utils.xml.XMLPrettyPrinter;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class NDataSourceHelper {
 
@@ -57,12 +65,12 @@ public class NDataSourceHelper {
 	
 	public static WSDataSourceMetaInfo createWSDataSourceMetaInfo(HttpServletRequest request, NDataSourceAdminServiceClient client) throws RemoteException, DataSourceException, NDataSourceAdminDataSourceException {
 		WSDataSourceMetaInfo_WSDataSourceDefinition dataSourceDefinition = null;
-		String datasourceType = request.getParameter("dsType");
-		String datasourceCustomType = request.getParameter("customDsType");
+		String datasourceType = sanitizeInput(request.getParameter("dsType"));
+		String datasourceCustomType = sanitizeInput(request.getParameter("customDsType"));
 		boolean configView = Boolean.parseBoolean(request.getParameter("configView"));
 		bundle = ResourceBundle.getBundle("org.wso2.carbon.ndatasource.ui.i18n.Resources",
 				request.getLocale());
-		String name = request.getParameter("dsName");
+		String name = sanitizeInput(request.getParameter("dsName"));
 		if (name == null || "".equals(name)) {
 			name = request.getParameter("name_hidden");
 			if (name == null || "".equals(name)) {
@@ -74,7 +82,7 @@ public class NDataSourceHelper {
 			handleException(bundle.getString("custom.ds.type.name.cannotfound.msg"));
 		}
 
-		String description = request.getParameter("description");
+		String description = sanitizeInput(request.getParameter("description"));
 
 		WSDataSourceMetaInfo dataSourceMetaInfo = new WSDataSourceMetaInfo();
 		dataSourceMetaInfo.setName(name);
@@ -122,15 +130,15 @@ public class NDataSourceHelper {
 				handleException(e.getMessage());
 			}
 
-			String dsProvider = request.getParameter("dsProviderType");
-			if ("External Data Source".equals(dsProvider)) {
-				String dsclassname = request.getParameter("dsclassname");
+			String dsProvider = sanitizeInput(request.getParameter("dsProviderType"));
+			if (NDataSourceClientConstants.RDBMS_EXTERNAL_DATASOURCE_PROVIDER.equals(dsProvider)) {
+				String dsclassname = sanitizeInput(request.getParameter("dsclassname"));
 				if (dsclassname == null || "".equals(dsclassname)) {
 					handleException(bundle.getString("ds.dsclassname.cannotfound.msg"));
 				}
 
 				// retrieve external data source properties
-				String dsproviderProperties = request.getParameter("dsproviderProperties");
+				String dsproviderProperties = sanitizeInput(request.getParameter("dsproviderProperties"));
 				if (dsproviderProperties == null || "".equals(dsproviderProperties)) {
 					handleException(bundle.getString("ds.external.datasource.property.cannotfound.msg"));
 				}
@@ -148,15 +156,15 @@ public class NDataSourceHelper {
 				rdbmsDSXMLConfig.setDataSourceClassName(dsclassname);
 				rdbmsDSXMLConfig.setDataSourceProps(dataSourceProps);
 			} else if ("default".equals(dsProvider)) {
-				String driver = request.getParameter("driver");
+				String driver = Encode.forHtmlContent(request.getParameter("driver"));
 				if (driver == null || "".equals(driver)) {
 					handleException(bundle.getString("ds.driver.cannotfound.msg"));
 				}
-				String url = request.getParameter("url");
+				String url = sanitizeInput(request.getParameter("url"));
 				if (url == null || "".equals(url)) {
 					handleException(bundle.getString("ds.url.cannotfound.msg"));
 				}
-				String username = request.getParameter("username");
+				String username = sanitizeInput(request.getParameter("username"));
 				String password = null;
 				
 				boolean isEditMode = Boolean.parseBoolean(request.getParameter("editMode"));
@@ -276,8 +284,22 @@ public class NDataSourceHelper {
 		try {
 			DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
 			docFactory.setNamespaceAware(false);
-		    DocumentBuilder db = docFactory.newDocumentBuilder();
-		    return db.parse(new ByteArrayInputStream(xml.getBytes())).getDocumentElement();
+			docFactory.setXIncludeAware(false);
+			docFactory.setExpandEntityReferences(false);
+
+			docFactory.setFeature(Constants.SAX_FEATURE_PREFIX + Constants.EXTERNAL_GENERAL_ENTITIES_FEATURE, false);
+
+			docFactory.setFeature(Constants.SAX_FEATURE_PREFIX + Constants.EXTERNAL_PARAMETER_ENTITIES_FEATURE, false);
+
+			docFactory.setFeature(Constants.XERCES_FEATURE_PREFIX + Constants.LOAD_EXTERNAL_DTD_FEATURE, false);
+
+			SecurityManager securityManager = new SecurityManager();
+			securityManager.setEntityExpansionLimit(0);
+			docFactory.setAttribute(Constants.XERCES_PROPERTY_PREFIX + Constants.SECURITY_MANAGER_PROPERTY,
+					securityManager);
+
+			DocumentBuilder db = docFactory.newDocumentBuilder();
+			return db.parse(new ByteArrayInputStream(xml.getBytes())).getDocumentElement();
 		} catch (Exception e) {
 			throw new RuntimeException(e.getMessage(), e);
 		}
@@ -480,22 +502,27 @@ public class NDataSourceHelper {
                         }
                 }
 	}
-	
-	public static String elementToString(Element element) {
-		try {
-			if (element == null) {
-				return null;
-			}
-		    Transformer transformer = TransformerFactory.newInstance().newTransformer();
-		    StringWriter buff = new StringWriter();
-		    transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-		    transformer.transform(new DOMSource(element), new StreamResult(buff));
-		    return buff.toString();
-		} catch (Exception e) {
-			log.error("Error while convering element to string: " + e.getMessage(), e);
-			return null;
-		}
-	}
+
+    public static String elementToString(Element element) {
+        try (StringWriter buff = new StringWriter()) {
+            if (element == null) {
+                return "";
+            }
+            TransformerFactory factory = TransformerFactory.newInstance();
+            factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            Transformer transformer = factory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            transformer.transform(new DOMSource(element), new StreamResult(buff));
+            return buff.toString();
+        } catch (TransformerException e) {
+            log.error("Error while converting element to string: " + e.getMessage(), e);
+            return "";
+        } catch (IOException e) {
+            log.error("Error while closing StringWriter " + e.getMessage(), e);
+            return "";
+        }
+    }
 	
 	private static List<Element> getChildElements(Element element) {
     	List<Element> childEls = new ArrayList<Element>();
@@ -561,5 +588,70 @@ public class NDataSourceHelper {
 		log.error(msg);
 		throw new IllegalArgumentException(msg);
 	}
-	
+
+    /**
+     * Returns the RDBMS engine name by analyzing the JDBC URL.
+     */
+    public static String getRDBMSEngine(String jdbcUrl) {
+        Pattern p = Pattern.compile("jdbc:[a-zA-Z0-9]+");
+        Matcher m = p.matcher(jdbcUrl);
+        while (m.find()) {
+            if (NDataSourceClientConstants.JDBCDriverPrefixes.MYSQL.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.MYSQL;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.DERBY.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.DERBY;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.MSSQL.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.MSSQL;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.ORACLE.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.ORACLE;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.DB2.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.DB2;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.HSQLDB.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.HSQLDB;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.POSTGRESQL.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.POSTGRESQL;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.SYBASE.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.SYBASE;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.H2.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.H2;
+            } else if (NDataSourceClientConstants.JDBCDriverPrefixes.INFORMIX.equals(m.group())) {
+                return NDataSourceClientConstants.RDBMSEngines.INFORMIX_SQLI;
+            }
+        }
+        return NDataSourceClientConstants.RDBMSEngines.GENERIC;
+    }
+
+	/**
+	 * Sanitize the input to prevent XSS.
+	 *
+	 * @param input {String} input to be sanitize
+	 * @return {String} sanitized input value or null
+	 */
+	private static String sanitizeInput(String input) {
+		if (input == null || input.isEmpty()) {
+			return null;
+		}
+		return input
+				.replaceAll("(?i)<script.*?>.*?</script.*?>", "")
+				.replaceAll("(?i)<script.*?>", "")
+				.replaceAll("(?i)<script.*?/>", "")
+				.replaceAll("(?i)<iframe.*?>.*?</iframe.*?>", "")
+				.replaceAll("(?i)<iframe.*?>", "")
+				.replaceAll("(?i)<iframe.*?/>", "")
+				.replaceAll("(?i)<object.*?>.*?</object.*?>", "")
+				.replaceAll("(?i)<object.*?>", "")
+				.replaceAll("(?i)<object.*?/>", "")
+				.replaceAll("(?i)<.*?javascript:.*?>.*?</.*?>", "")
+				.replaceAll("(?i)<.*?javascript:.*?>", "")
+				.replaceAll("(?i)<.*?javascript:.*?/>", "")
+				.replaceAll("(?i)<.*?onload=.*?>.*?</.*?>", "")
+				.replaceAll("(?i)<.*?onload=.*?>", "")
+				.replaceAll("(?i)<.*?onload=.*?/>", "")
+				.replaceAll("(?i)<.*?expression.*?>.*?</.*?>", "")
+				.replaceAll("(?i)<.*?expression.*?>", "")
+				.replaceAll("(?i)<.*?expression.*?/>", "")
+				.replaceAll("(?i)<.*?\\\\s+on.*?>.*?</.*?>", "")
+				.replaceAll("(?i)<.*?\\\\s+on.*?>", "")
+				.replaceAll("(?i)<.*?\\\\s+on.*?/>", "");
+	}
 }

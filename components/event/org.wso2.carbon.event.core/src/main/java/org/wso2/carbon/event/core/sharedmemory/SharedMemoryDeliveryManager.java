@@ -47,6 +47,7 @@ import java.util.concurrent.ExecutorService;
 /**
  * shared memory implementation of the delivery manager.
  */
+@Deprecated
 public class SharedMemoryDeliveryManager implements DeliveryManager {
 
 	private static final Log log = LogFactory.getLog(SharedMemoryDeliveryManager.class);
@@ -70,8 +71,8 @@ public class SharedMemoryDeliveryManager implements DeliveryManager {
             String userName = subscription.getOwner();
 
             // trim the domain part if it is there.
-            if (userName.indexOf('@') != -1){
-                userName = userName.substring(0, userName.indexOf('@'));
+            if (userName.lastIndexOf("@") != -1){
+                userName = userName.substring(0, userName.lastIndexOf("@"));
             }
             if (userName.equals(CarbonConstants.REGISTRY_SYSTEM_USERNAME) ||
                     userRealm.getAuthorizationManager().isUserAuthorized(

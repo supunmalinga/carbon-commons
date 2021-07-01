@@ -1,21 +1,22 @@
-<!--
- ~ Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- ~
- ~ WSO2 Inc. licenses this file to you under the Apache License,
- ~ Version 2.0 (the "License"); you may not use this file except
- ~ in compliance with the License.
- ~ You may obtain a copy of the License at
- ~
- ~    http://www.apache.org/licenses/LICENSE-2.0
- ~
- ~ Unless required by applicable law or agreed to in writing,
- ~ software distributed under the License is distributed on an
- ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- ~ KIND, either express or implied.  See the License for the
- ~ specific language governing permissions and limitations
- ~ under the License.
- -->
+<%--
+~ Copyright (c) 2020, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+~
+~ WSO2 Inc. licenses this file to you under the Apache License,
+~ Version 2.0 (the "License"); you may not use this file except
+~ in compliance with the License.
+~ You may obtain a copy of the License at
+~
+~ http://www.apache.org/licenses/LICENSE-2.0
+~
+~ Unless required by applicable law or agreed to in writing,
+~ software distributed under the License is distributed on an
+~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+~ KIND, either express or implied. See the License for the
+~ specific language governing permissions and limitations
+~ under the License.
+--%>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+
 <%@ page import="org.wso2.carbon.logging.admin.ui.LoggingAdminClient" %>
 <%@ page import="org.wso2.carbon.utils.ServerConstants" %>
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
@@ -66,10 +67,9 @@
 
         <thead>
         <tr>
-            <th width="40%"><fmt:message key="logger"/></th>
-            <th width="40%"><fmt:message key="parent.logger"/></th>
-            <th><fmt:message key="effective.level"/></th>
-            <th><fmt:message key="additivity"/></th>
+            <th width="40%"><fmt:message key="logger.name"/></th>
+            <th width="40%"><fmt:message key="logger.class"/></th>
+            <th><fmt:message key="logging.level"/></th>
         </tr>
         </thead>
 
@@ -79,19 +79,17 @@
             String[] logLevels = client.getLogLevels();
             for (LoggerData loggerData : allLoggerData) {
                 String loggerName = loggerData.getName();
-                String parentName = loggerData.getParentName();
-                boolean additivity = loggerData.getAdditivity();
+                String componentName = loggerData.getComponentName();
                 String logLevel = loggerData.getLevel();
         %>
 
         <tr>
             <td width="40%"><%=loggerName%></td>
-            <td width="40%"><%=parentName%></td>
+            <td width="40%"><%=componentName%></td>
             <td>
                 <select id='<%=loggerName%>LogLevel'
                         onchange="updateLogger('<%=loggerName%>',
-                                                  '<%=loggerName%>LogLevel',
-                                                  '<%=loggerName%>Additivity');">
+                                '<%=loggerName%>LogLevel');">
 
                     <%
                         for (String logLevelType : logLevels) {
@@ -110,26 +108,6 @@
 
                     <% }
                     }
-                    %>
-                </select>
-            </td>
-            <td>
-                <select id="<%= loggerName%>Additivity"
-                        onchange="updateLogger('<%=loggerName%>',
-                                                  '<%=loggerName%>LogLevel',
-                                                  '<%= loggerName%>Additivity');">
-                    <%
-                        if (additivity) {
-                    %>
-                    <option selected="true" value="true"><fmt:message key="true"/></option>
-                    <option value="false"><fmt:message key="false"/></option>
-                    <%
-                    } else {
-                    %>
-                    <option value="true"><fmt:message key="true"/></option>
-                    <option selected="true" value="false"><fmt:message key="false"/></option>
-                    <%
-                        }
                     %>
                 </select>
             </td>

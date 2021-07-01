@@ -23,6 +23,7 @@
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage" %>
 <%@ page import="org.wso2.carbon.application.mgt.stub.types.carbon.ApplicationMetadata" %>
 <%@ page import="java.util.ResourceBundle" %>
+<%@ page import="java.util.ArrayList" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://wso2.org/projects/carbon/taglibs/carbontags.jar" prefix="carbon" %>
 
@@ -31,10 +32,23 @@
 
 <%
     String backendServerURL = CarbonUIUtil.getServerURL(config.getServletContext(), session);
+    Boolean allowCappDelete = false;
+    Boolean allowCappRedeploy = false;
     ConfigurationContext configContext =
             (ConfigurationContext) config.getServletContext().getAttribute(CarbonConstants.CONFIGURATION_CONTEXT);
 
     String cookie = (String) session.getAttribute(ServerConstants.ADMIN_SERVICE_COOKIE);
+
+    ArrayList<String> permissions = (ArrayList<String>) session.getAttribute(ServerConstants.USER_PERMISSIONS);
+    if (permissions.contains("/permission")
+        || permissions.contains("/permission/admin")
+        || permissions.contains("/permission/admin/manage")
+        || permissions.contains("/permission/admin/manage/capps")
+        || (permissions.contains("/permission/admin/manage/capps/add")
+            && permissions.contains("/permission/admin/manage/capps/list"))) {
+        allowCappDelete = true;
+        allowCappRedeploy = true;
+    }
 
     String BUNDLE = "org.wso2.carbon.application.mgt.ui.i18n.Resources";
     ResourceBundle bundle = ResourceBundle.getBundle(BUNDLE, request.getLocale());
@@ -77,6 +91,13 @@
     function deleteApplication(appName) {
         CARBON.showConfirmationDialog("<fmt:message key="confirm.delete.app"/>" , function(){
             document.applicationsForm.action = "delete_artifact.jsp?appName=" + appName;
+            document.applicationsForm.submit();
+        });
+    }
+
+    function redeployApplication(appName) {
+        CARBON.showConfirmationDialog("<fmt:message key="confirm.redeploy.app"/>" , function(){
+            document.applicationsForm.action = "redeploy_artifact.jsp?appName=" + appName;
             document.applicationsForm.submit();
         });
     }
@@ -140,7 +161,7 @@
                     <tr>
                         <th><fmt:message key="carbonapps.applications"/></th>
                         <th><fmt:message key="carbonapps.version"/></th>
-                        <th colspan="2"><fmt:message key="carbonapps.actions"/></th>
+                        <th colspan="3"><fmt:message key="carbonapps.actions"/></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -161,7 +182,20 @@
                         <%
                             }
                         %>
-                        <td><a href="#" class="icon-link-nofloat" style="background-image:url(images/delete.gif);" onclick="deleteApplication('<%= appNameWithVersion%>');" title="<%= bundle.getString("carbonapps.delete.this.row")%>"><%= bundle.getString("carbonapps.delete")%></a></td>
+                        <%
+                            if(allowCappDelete) {
+                        %>
+                            <td><a href="#" class="icon-link-nofloat" style="background-image:url(images/delete.gif);" onclick="deleteApplication('<%= appNameWithVersion%>');" title="<%= bundle.getString("carbonapps.delete.this.row")%>"><%= bundle.getString("carbonapps.delete")%></a></td>
+                        <%
+                            }
+                        %>
+                        <%
+                            if(allowCappRedeploy) {
+                        %>
+                            <td><a href="#" class="icon-link-nofloat" style="background-image:url(images/redeploy.gif);" onclick="redeployApplication('<%= appNameWithVersion%>');" title="<%= bundle.getString("carbonapps.redeploy.this.row")%>"><%= bundle.getString("carbonapps.redeploy")%></a></td>
+                        <%
+                            }
+                        %>
                         <td><a href="download-ajaxprocessor.jsp?cappName=<%= appNameWithVersion%>" class="icon-link-nofloat" style="background-image:url(images/download.gif);" title="<%= bundle.getString("download.capp")%>"><%= bundle.getString("download")%></a></td>
                     </tr>
                     <%

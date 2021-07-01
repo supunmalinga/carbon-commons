@@ -15,11 +15,15 @@
  */
 package org.wso2.carbon.ntask.core.impl.clustered;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.ntask.common.TaskException;
 import org.wso2.carbon.ntask.common.TaskException.Code;
 import org.wso2.carbon.ntask.core.*;
 import org.wso2.carbon.ntask.core.impl.AbstractQuartzTaskManager;
 import org.wso2.carbon.ntask.core.impl.clustered.rpc.*;
+import org.wso2.carbon.ntask.core.internal.TasksDSComponent;
+import org.wso2.carbon.ntask.core.service.TaskService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,9 +38,14 @@ import java.util.concurrent.locks.Lock;
 public class ClusteredTaskManager extends AbstractQuartzTaskManager {
 
     private static final String TASK_MEMBER_LOCATION_META_PROP_ID = "TASK_MEMBER_LOCATION_META_PROP_ID";
+    private static final int TASKSERVICE_AVAILABILITY_CHECK_RETRY_COUNT = 10;
+    private final TaskService taskService;
+
+    private static final Log log = LogFactory.getLog(ClusteredTaskManager.class);
 
     public ClusteredTaskManager(TaskRepository taskRepository) throws TaskException {
         super(taskRepository);
+        this.taskService = TasksDSComponent.getTaskService();
     }
 
     public int getTenantId() {
@@ -53,7 +62,13 @@ public class ClusteredTaskManager extends AbstractQuartzTaskManager {
 
     public void initStartupTasks() throws TaskException {
         if (this.isLeader()) {
-            this.scheduleMissingTasks();
+            try {
+                this.scheduleMissingTasks();
+            } catch (TaskException e) {
+                log.error("Encountered error(s) in scheduling missing tasks ["
+                        + this.getTaskType() + "][" + this.getTenantId() + "]:-\n" +
+                        e.getMessage() + "\n");
+            }
         }
     }
 
@@ -81,6 +96,67 @@ public class ClusteredTaskManager extends AbstractQuartzTaskManager {
         if (error) {
             throw new TaskException(errors.toString(), Code.UNKNOWN);
         }
+    }
+
+    /**
+     * Schedules tasks for the given member id
+     *
+     * @param memberId cluster member identifier
+     * @throws TaskException
+     */
+    public void scheduleMissingTasks(String memberId) throws TaskException {
+        List<TaskInfo> scheduledTasks = this.getAllRunningTasksInOtherMembers(memberId);
+        // add already finished tasks
+        scheduledTasks.addAll(this.getAllFinishedTasks());
+        List<TaskInfo> allTasks = this.getAllTasks();
+        List<TaskInfo> missingTasks = new ArrayList<TaskInfo>(allTasks);
+        missingTasks.removeAll(scheduledTasks);
+        StringBuilder errors = new StringBuilder();
+        boolean error = false;
+        for (TaskInfo task : missingTasks) {
+            try {
+                if (this.isTaskServiceAvailable(task.getName())) {
+                    this.scheduleTask(task.getName());
+                } else {
+                    throw new TaskException("The task service not available for the task: " + task.getName(),
+                            Code.UNKNOWN);
+                }
+            } catch (Exception e) {
+                errors.append(e.getMessage() + "\n");
+                error = true;
+            }
+        }
+        if (error) {
+            throw new TaskException(errors.toString(), Code.UNKNOWN);
+        }
+    }
+
+    /**
+     * Returns the state of the task service for the task server at the task schedule time
+     *
+     * @param taskName name of the task
+     * @return true if the task service is activated for the task server at the task schedule time
+     */
+    private boolean isTaskServiceAvailable(String taskName) {
+        int count = taskService.getServerConfiguration().getRetryCount();
+        long retryInterval = taskService.getServerConfiguration().getRetryInterval();
+        while (count > 0) {
+            try {
+                TaskState taskState = getTaskState(taskName);
+                if (taskState.equals(TaskState.NONE)) {
+                    this.scheduleTask(taskName);
+                }
+                return true;
+            } catch (TaskException e) {
+                try {
+                    Thread.sleep(retryInterval);
+                } catch (InterruptedException ex) {
+                    //ignore
+                }
+            }
+            count--;
+        }
+        return false;
     }
 
     public void scheduleTask(String taskName) throws TaskException {
@@ -135,27 +211,34 @@ public class ClusteredTaskManager extends AbstractQuartzTaskManager {
     public boolean deleteTask(String taskName) throws TaskException {
         boolean result = true;
         String memberId = null;
+        String taskLockId = this.getTaskType() + "_" + this.getTenantId() + "_" + taskName;
+        Lock lock = this.getClusterComm().getHazelcast().getLock(taskLockId);
         try {
+            lock.lock();
             memberId = this.getMemberIdFromTaskName(taskName, false);
+            String localMemberId = getMemberId();
+            // deletion of tasks which are scheduled in other nodes are skipped
+            if (localMemberId.equals(memberId)) {
+                result = this.deleteTask(memberId, taskName);
+                // delete from repository has to be done here, because, this would be the local node
+                // with read/write registry access, and the remote node will not have write access
+                result &= this.getTaskRepository().deleteTask(taskName);
+            } else {
+                result = false;
+                log.info("The task " + taskName + " is not scheduled in this node, hence deletion is skipped.");
+            }
         } catch (TaskException e) {
             /* if the task is not scheduled anywhere, we can ignore this delete request to the
              * remote server */
             if (!Code.NO_TASK_EXISTS.equals(e.getCode())) {
                 throw e;
             }
-        }
-        try {
-            /* only if the task is running somewhere, send a delete task call */
-            if (memberId != null) {
-                result = this.deleteTask(memberId, taskName);
-            }
         } catch (Exception e) {
             throw new TaskException("Error in deleting task: " + taskName + " : " + e.getMessage(),
-                        Code.UNKNOWN, e);
+                                    Code.UNKNOWN, e);
+        } finally {
+            lock.unlock();
         }
-        /* the delete from repository has to be done here, because, this would be the admin node
-         * with read/write registry access, and the target slave will not have write access */
-        result &= this.getTaskRepository().deleteTask(taskName);
         return result;        
     }
 
@@ -168,7 +251,7 @@ public class ClusteredTaskManager extends AbstractQuartzTaskManager {
     public void resumeTask(String taskName) throws TaskException {
         String memberId = this.getMemberIdFromTaskName(taskName, false);
         this.resumeTask(memberId, taskName);
-        TaskUtils.setTaskPaused(this.getTaskRepository(), taskName, true);
+        TaskUtils.setTaskPaused(this.getTaskRepository(), taskName, false);
     }
 
     @Override
@@ -176,12 +259,19 @@ public class ClusteredTaskManager extends AbstractQuartzTaskManager {
         /* if the task registration already exists, we have to make sure we save the current location
          * of the task, since this is a task registration update, we will want to schedule the task
          * in the same server as earlier */
-        String locationId = this.getTaskRepository().getTaskMetadataProp(
-                taskInfo.getName(), TASK_MEMBER_LOCATION_META_PROP_ID);
-        this.registerLocalTask(taskInfo);
-        if (locationId != null) {
-            this.getTaskRepository().setTaskMetadataProp(taskInfo.getName(),
-                    TASK_MEMBER_LOCATION_META_PROP_ID, locationId);
+        String taskLockId = this.getTaskType() + "_" + this.getTenantId() + "_" + taskInfo.getName();
+        Lock lock = this.getClusterComm().getHazelcast().getLock(taskLockId);
+        try {
+            lock.lock();
+            String locationId = this.getTaskRepository().getTaskMetadataProp(
+                    taskInfo.getName(), TASK_MEMBER_LOCATION_META_PROP_ID);
+            this.registerLocalTask(taskInfo);
+            if (locationId != null) {
+                this.getTaskRepository().setTaskMetadataProp(taskInfo.getName(),
+                        TASK_MEMBER_LOCATION_META_PROP_ID, locationId);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -238,6 +328,24 @@ public class ClusteredTaskManager extends AbstractQuartzTaskManager {
         }
         locationResolver.init(props);
         return locationResolver.getLocation(ctx, taskInfo);
+    }
+
+    /**
+     * Gets all the tasks running on the other task server members of the cluster
+     *
+     * @param memberId cluster member identifier
+     * @return task list of the running tasks
+     * @throws TaskException
+     */
+    public List<TaskInfo> getAllRunningTasksInOtherMembers(String memberId) throws TaskException {
+        List<TaskInfo> results = new ArrayList<>();
+        List<String> ids = this.getMemberIds();
+        for (String id : ids) {
+            if (!id.equals(memberId)) {
+                results.addAll(this.getRunningTasksInServer(id));
+            }
+        }
+        return results;
     }
 
     public List<List<TaskInfo>> getAllRunningTasksInServers() throws TaskException {

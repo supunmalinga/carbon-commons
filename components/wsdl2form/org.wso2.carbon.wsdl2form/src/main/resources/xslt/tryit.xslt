@@ -29,12 +29,13 @@
     <xsl:param name="service" select="services/service[1]/@name"/>
 
     <!-- Paths to external resources can be specified here. -->
+    <xsl:param name="js-csrf-protection" select="'../carbon/admin/js/csrfPrevention.js'"/>
     <xsl:param name="js-global-params" select="'../carbon/global-params.js'"/>
     <xsl:param name="js-WSRequest" select="'?wsdl2form&amp;contentType=text/javascript&amp;resource=js/WSRequest.js'"/>
     <xsl:param name="js-jQuery" select="'?wsdl2form&amp;contentType=text/javascript&amp;resource=js/jquery-1.5.2.min.js'"/>
     <xsl:param name="js-jQueryUI" select="'?wsdl2form&amp;contentType=text/javascript&amp;resource=js/jquery-ui-1.8.11.custom.min.js'"/>
     <xsl:param name="js-corners" select="'?wsdl2form&amp;contentType=text/javascript&amp;resource=extras/jquery.corner.js'"/>
-    <xsl:param name="js-editArea" select="'?wsdl2form&amp;resource=editarea/edit_area_full.js'"/>
+    <xsl:param name="js-editArea" select="'?wsdl2form&amp;contentType=text/javascript&amp;resource=editarea/edit_area_full.js'"/>
     <xsl:param name="proxyAddress" select="'../admin/jsp/WSRequestXSSproxy_ajaxprocessor.jsp'"/>
     <xsl:param name="xslt-location" select="'?wsdl2form&amp;contentType=text/xml&amp;resource=xslt/prettyprinter.xslt'"/>
     <xsl:param name="enable-header" select="'false'"/>
@@ -106,6 +107,9 @@
 
     <xsl:template name="header-template">
         <xsl:call-template name="css"/>
+        <script type="text/javascript" src="{$js-csrf-protection}"></script>
+        <xsl:text>
+        </xsl:text>
         <script type="text/javascript" src="{$js-WSRequest}"></script>
         <xsl:text>
         </xsl:text>

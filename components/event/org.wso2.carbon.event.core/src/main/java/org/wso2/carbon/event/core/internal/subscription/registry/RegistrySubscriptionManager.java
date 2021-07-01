@@ -17,6 +17,8 @@
 package org.wso2.carbon.event.core.internal.subscription.registry;
 
 import org.apache.axis2.databinding.utils.ConverterUtil;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.event.core.exception.EventBrokerConfigurationException;
 import org.wso2.carbon.event.core.exception.EventBrokerException;
 import org.wso2.carbon.event.core.internal.util.EventBrokerHolder;
@@ -51,7 +53,9 @@ import java.util.Properties;
  * When getting the subscriptions we calculate the subscription stored path using above two
  * parameters.
  */
+@Deprecated
 public class RegistrySubscriptionManager implements SubscriptionManager {
+    private static final Log log = LogFactory.getLog(RegistrySubscriptionManager.class);
 
     /**
      * Star wildcard - can substitute for exactly one word.
@@ -288,7 +292,7 @@ public class RegistrySubscriptionManager implements SubscriptionManager {
             }
 
         } catch (RegistryException e) {
-            throw new EventBrokerException("Cannot access the registry ", e);
+            log.error("Cannot access the registry while listing all the available subscriptions. " + e);
         }
         return subscriptions;
     }

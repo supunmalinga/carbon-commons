@@ -1,17 +1,17 @@
 <!--
- ~ Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ ~ Copyright (c) 2020, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  ~
  ~ WSO2 Inc. licenses this file to you under the Apache License,
  ~ Version 2.0 (the "License"); you may not use this file except
  ~ in compliance with the License.
  ~ You may obtain a copy of the License at
  ~
- ~    http://www.apache.org/licenses/LICENSE-2.0
+ ~ http://www.apache.org/licenses/LICENSE-2.0
  ~
  ~ Unless required by applicable law or agreed to in writing,
  ~ software distributed under the License is distributed on an
  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- ~ KIND, either express or implied.  See the License for the
+ ~ KIND, either express or implied. See the License for the
  ~ specific language governing permissions and limitations
  ~ under the License.
  -->
@@ -25,11 +25,11 @@
 <!-- 	import="org.wso2.carbon.logging.view.stub.types.carbon.LogEvent"%> -->
 <%@ page import="org.wso2.carbon.utils.ServerConstants"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
-<%@ page import="org.wso2.carbon.logging.view.stub.types.carbon.PaginatedLogEvent"%>
+<%@ page import="org.wso2.carbon.logging.view.ui.data.PaginatedLogEvent"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
-<%@ page import="org.wso2.carbon.logging.view.stub.types.carbon.LogEvent"%>
+<%@ page import="org.wso2.carbon.logging.view.ui.data.LogEvent"%>
 <%@ page import="java.text.SimpleDateFormat" %>
 <script type="text/javascript" src="js/logviewer.js"></script>
 <script type="text/javascript" src="../admin/dialog/js/dialog.js"></script>
@@ -88,26 +88,26 @@
 			action = CharacterEncoder.getSafeText(request.getParameter("action"));
 			appName = request.getParameter("appName");
 			logViewerClient = new LogViewerClient(cookie, backendServerURL, configContext);
-            isValidTenant = logViewerClient.isValidTenant(tenantDomain);
+            isValidTenant = logViewerClient.isValidTenant();
             if (tenantDomain == null) {
                 tenantDomain = "";
             }
             if (serviceName == null) {
                 serviceName = "";
             }
-            if(isValidTenant) {
-                applicationNames = logViewerClient.getApplicationNames(tenantDomain, serviceName);
+            if (isValidTenant) {
+                applicationNames = logViewerClient.getApplicationNames();
                 if (appName == null && applicationNames !=null  && applicationNames.length > 0) {
                     appName = applicationNames[0];
                 }
                 if (applicationNames == null) {
                     applicationNames = new String[]{"No applications"};
                     appName = applicationNames[0];
-                } else if(applicationNames != null && applicationNames.length == 0) {
+                } else if (applicationNames != null && applicationNames.length == 0) {
                     applicationNames = new String[]{"No applications"};
                     appName = applicationNames[0];
                 }
-                paginatedLogEvents = logViewerClient.getPaginatedApplicationLogEvents(pageNumber,type,keyword,appName, tenantDomain, serviceName);
+                paginatedLogEvents = logViewerClient.getPaginatedApplicationLogEvents(pageNumber,type,keyword,appName);
             }
             if (applicationNames == null) {
                 applicationNames = new String[]{"No applications"};
@@ -276,7 +276,7 @@
 									</tr>
 								</thead>
                                 <%
-                                    if(!isValidTenant) { %>
+                                    if (!isValidTenant) { %>
                                 <fmt:message key="invalid.tenant" />
 
                                 <%} else {

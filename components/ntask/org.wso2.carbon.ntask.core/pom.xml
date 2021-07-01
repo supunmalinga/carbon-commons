@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.wso2.carbon.commons</groupId>
         <artifactId>ntask</artifactId>
-        <version>4.5.0-SNAPSHOT</version>
+        <version>4.7.39-SNAPSHOT</version>
 	<relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -55,15 +55,16 @@
             <groupId>org.quartz-scheduler.wso2</groupId>
             <artifactId>quartz</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
-        <plugins>            
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-scr-plugin</artifactId>
-		<version>1.7.4</version>
-            </plugin>
+        <plugins>
+
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
@@ -75,7 +76,8 @@
                         <DynamicImport-Package>*</DynamicImport-Package>
                         <Import-Package>
                             org.quartz.*;version="2.1.1",
-		            *;resolution:=optional
+                            javax.xml.parsers; version="${javax.xml.parsers.import.pkg.version}",
+                            *;resolution:=optional
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.ntask.internal,
@@ -87,5 +89,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

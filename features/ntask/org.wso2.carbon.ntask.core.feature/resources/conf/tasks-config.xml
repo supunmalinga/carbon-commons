@@ -14,6 +14,11 @@
       are activated before the tasks are scheduled -->
     <taskServerCount>2</taskServerCount>
 
+    <!--
+     You can explicitly configure task repository class
+     FileBasedTaskRepository is supported in only micro ei profile where multitenancy and clustering is disabled-->
+     <!--<taskRepositoryClass>org.wso2.carbon.ntask.core.impl.FileBasedTaskRepository</taskRepositoryClass>-->
+
     <!-- The default location resolver configuration -->
     <defaultLocationResolver>
         <locationResolverClass>org.wso2.carbon.ntask.core.impl.RoundRobinTaskLocationResolver</locationResolverClass>
@@ -47,5 +52,12 @@
 
     <!-- Below contain a sample to be used when using with secure vault -->
     <!--remoteServerPassword svns:secretAlias="remote.task.server.password"></remoteServerPassword-->
+
+     <!-- The task service availability of remote task server-->
+     <taskServerAvailabilityCheck>
+         <retryCount>10</retryCount>
+         <!--time interval(milliseconds) between availability check -->
+         <retryInterval>1000</retryInterval>
+     </taskServerAvailabilityCheck>
 
 </tasks-configuration>

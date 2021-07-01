@@ -1,6 +1,7 @@
 <%@ page import="org.apache.axis2.client.Options" %>
 <%@ page import="org.apache.axis2.client.ServiceClient" %>
 <%@ page import="org.apache.axis2.context.ConfigurationContext" %>
+<%@ page import="org.owasp.encoder.Encode" %>
 <%@ page import="org.wso2.carbon.CarbonConstants" %>
 <%@ page import="org.wso2.carbon.event.stub.internal.TopicManagerAdminServiceStub" %>
 <%@ page import="org.wso2.carbon.event.stub.internal.xsd.TopicRolePermission" %>
@@ -209,8 +210,8 @@
                     <td>
                         <input class="longInput" id="existingTopic" type="hidden"
                                readonly="true"
-                               value="<%=topicPath%>">
-                        <strong><fmt:message key="parent.topic"/>:</strong> <%=topicPath%>
+                               value="<%=Encode.forHtml(topicPath)%>">
+                        <strong><fmt:message key="parent.topic"/>:</strong> <%=Encode.forHtml(topicPath)%>
                     </td>
                 </tr>
                 </tbody>
@@ -305,7 +306,7 @@
                         <div class="paginatorWrapper">
                             <carbon:paginator pageNumber="<%=pageNumber%>" numberOfPages="<%=numberOfPages%>"
                                               page="add_subtopic.jsp" pageNumberParameterName="pageNumber"
-                                              resourceBundle="org.wso2.carbon.andes.ui.i18n.Resources"
+                                              resourceBundle="org.wso2.carbon.event.ui.i18n.Resources"
                                               prevKey="prev" nextKey="next"
                                               parameters="<%=concatenatedParams%>"/>
                         </div>

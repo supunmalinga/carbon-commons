@@ -15,13 +15,13 @@
  */
 package org.wso2.carbon.ntask.core.service.impl;
 
+import org.wso2.carbon.ntask.core.service.TaskService.TaskServerMode;
+
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
-
-import org.wso2.carbon.ntask.core.service.TaskService.TaskServerMode;
 
 /**
  * This represents the task service XML based configuration.
@@ -37,13 +37,21 @@ public class TaskServiceXMLConfiguration {
 
     private String remoteServerAddress;
 
+    private String taskRepositoryClass;
+
     private String remoteServerUsername;
 
     private String remoteServerPassword;
 
     private DefaultLocationResolver defaultLocationResolver = new DefaultLocationResolver(DEFAULT_LOCATION_RESOLVER_CLASS);
 
+    private TaskServerAvailabilityCheck taskServerAvailabilityCheck = new TaskServerAvailabilityCheck();
+
     public static final String DEFAULT_LOCATION_RESOLVER_CLASS = "org.wso2.carbon.ntask.core.impl.RoundRobinTaskLocationResolver";
+
+    public static final int TASKSERVICE_AVAILABILITY_CHECK_RETRY_COUNT = 10;
+
+    public static final int TASKSERVICE_AVAILABILITY_CHECK_RETRY_INTERVAL = 1000;
 
     public TaskServerMode getTaskServerMode() {
         return taskServerMode;
@@ -97,6 +105,19 @@ public class TaskServiceXMLConfiguration {
     public void setRemoteServerPassword(String remoteServerPassword) {
         this.remoteServerPassword = remoteServerPassword;
     }
+
+    @XmlElement(name = "taskRepositoryClass", defaultValue = "org.wso2.carbon.ntask.core.impl.RegistryBasedTaskRepository")
+    public String getTaskRepositoryClass() {
+        return taskRepositoryClass;
+    }
+
+    public void setTaskRepositoryClass(String taskRepositoryClass) {
+        if (taskRepositoryClass != null) {
+            this.taskRepositoryClass = taskRepositoryClass;
+        } else {
+            this.taskRepositoryClass = "org.wso2.carbon.ntask.core.impl.RegistryBasedTaskRepository";
+        }
+    }
     
     @XmlElement(name = "defaultLocationResolver", nillable = true, required = false)
     public DefaultLocationResolver getDefaultLocationResolver() {
@@ -109,6 +130,15 @@ public class TaskServiceXMLConfiguration {
 		    this.defaultLocationResolver = defaultLocationResolver;
 		}
 	}
+
+    @XmlElement(name = "taskServerAvailabilityCheck", nillable = true, required = false)
+    public TaskServerAvailabilityCheck getTaskServerAvailabilityCheck() {
+        return taskServerAvailabilityCheck;
+    }
+
+    public void setTaskServerAvailabilityCheck(TaskServerAvailabilityCheck taskServerAvailabilityCheck) {
+        this.taskServerAvailabilityCheck = taskServerAvailabilityCheck;
+    }
 
 	public static class DefaultLocationResolver {
     	
@@ -172,6 +202,30 @@ public class TaskServiceXMLConfiguration {
 			
 		}
     	
+    }
+
+    public static class TaskServerAvailabilityCheck {
+
+        private int retryCount;
+        private long retryInterval;
+
+        @XmlElement(defaultValue = "10")
+        public int getRetryCount() {
+            return retryCount;
+        }
+
+        public void setRetryCount(int retryCount) {
+            this.retryCount = retryCount;
+        }
+
+        @XmlElement(defaultValue = "1000")
+        public long getRetryInterval() {
+            return retryInterval;
+        }
+
+        public void setRetryInterval(long retryInterval) {
+            this.retryInterval = retryInterval;
+        }
     }
 
 }

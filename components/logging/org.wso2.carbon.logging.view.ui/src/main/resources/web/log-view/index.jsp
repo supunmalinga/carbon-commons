@@ -1,17 +1,17 @@
 <!--
- ~ Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ ~ Copyright (c) 2020, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  ~
  ~ WSO2 Inc. licenses this file to you under the Apache License,
  ~ Version 2.0 (the "License"); you may not use this file except
  ~ in compliance with the License.
  ~ You may obtain a copy of the License at
  ~
- ~    http://www.apache.org/licenses/LICENSE-2.0
+ ~ http://www.apache.org/licenses/LICENSE-2.0
  ~
  ~ Unless required by applicable law or agreed to in writing,
  ~ software distributed under the License is distributed on an
  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- ~ KIND, either express or implied.  See the License for the
+ ~ KIND, either express or implied. See the License for the
  ~ specific language governing permissions and limitations
  ~ under the License.
  -->
@@ -21,26 +21,28 @@
 <%@ page import="org.wso2.carbon.logging.view.ui.LogViewerClient"%>
 <%@ page import="org.apache.axis2.context.ConfigurationContext"%>
 <%@ page import="org.wso2.carbon.CarbonConstants"%>
-<%@ page import="org.wso2.carbon.logging.view.stub.types.carbon.LogFileInfo"%>
+<%@ page import="org.wso2.carbon.logging.view.ui.data.LogFileInfo"%>
 <%-- <%@ page --%>
-<!-- 	import="org.wso2.carbon.logging.view.stub.types.carbon.LogEvent"%> -->
+
 <%@ page import="org.wso2.carbon.utils.ServerConstants"%>
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
 
 <%@ page import="org.wso2.carbon.ui.CarbonUIMessage"%>
-<%@ page import="org.wso2.carbon.logging.view.stub.types.carbon.PaginatedLogFileInfo"%>
-<%@ page import="org.wso2.carbon.logging.view.stub.types.carbon.PaginatedLogEvent"%>
+<%@ page import="org.wso2.carbon.logging.view.ui.data.PaginatedLogFileInfo"%>
+<%@ page import="org.wso2.carbon.logging.view.ui.data.PaginatedLogEvent"%>
 
 <%@ page import="org.wso2.carbon.ui.CarbonUIUtil"%>
 <%@ page import="org.wso2.carbon.ui.util.CharacterEncoder" %>
-<%@ page import="org.wso2.carbon.logging.view.stub.types.carbon.LogEvent"%>
+<%@ page import="org.wso2.carbon.logging.view.ui.data.LogEvent"%>
 <%@ page import="java.util.regex.Matcher"%>
 <%@ page import="java.util.regex.Pattern"%>
 <%@ page import="java.text.SimpleDateFormat" %>
 <%@ page import="java.util.Calendar" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="java.util.TimeZone" %>
-<%@ page import="org.wso2.carbon.logging.view.stub.types.carbon.LogFileInfo" %>
+<%@ page import="org.wso2.carbon.logging.view.ui.data.LogFileInfo" %>
+<%@ page import="org.owasp.encoder.Encode" %>
+
 <script type="text/javascript" src="js/logviewer.js"></script>
 <script type="text/javascript" src="../admin/dialog/js/dialog.js"></script>
 
@@ -112,7 +114,7 @@
 		try {
 			type = CharacterEncoder.getSafeText(request.getParameter("type"));
 			type = (type == null) ? "" : type;
-            if(tenantDomain == null) {
+            if (tenantDomain == null) {
                 tenantDomain = "";
             }
             if (serviceName == null) {
@@ -123,10 +125,10 @@
 			keyword = (keyword == null) ? "" : keyword;
 			action = CharacterEncoder.getSafeText(request.getParameter("action"));
 			logViewerClient = new LogViewerClient(cookie, backendServerURL, configContext);
-            isValidTenant = logViewerClient.isValidTenant(tenantDomain);
-            if(isValidTenant) {
+            isValidTenant = logViewerClient.isValidTenant();
+            if (isValidTenant) {
                 paginatedLogEvents = logViewerClient.getPaginatedLogEvents(pageNumber, type,
-                        keyword, tenantDomain, serviceName);
+                        keyword);
                 paginatedLogFileInfo = logViewerClient.getLocalLogFiles(pageIndexNumber, tenantDomain, serviceName);
             }
 
@@ -142,8 +144,8 @@
             isManager = logViewerClient.isManager();
             serviceNames = logViewerClient.getServiceNames();
 			showLogFiles = (logFileInfo != null);
-            if(isManager) {
-                if(isSuperTenant) {
+            if (isManager) {
+                if (isSuperTenant) {
                     parameter = "type=" + type + "&keyword=" + keyword + "&serviceName=" + serviceName +
                             "&tenantDomain=" + tenantDomain + "&collapse=" + isCollapse;
                     indexParameter = "type=" + type + "&keyword=" + keyword+"&showMax=" + true + "&serviceName=" + serviceName +
@@ -190,7 +192,7 @@
         <tr>
 
             <%
-            if(isCollapse) {
+            if (isCollapse) {
             %>
             <td class="middle-header" colspan="4"><a
                     class="icon-link"
@@ -250,7 +252,7 @@
 
                     </select></td>
                     <%
-                        if(isSuperTenant) {
+                        if (isSuperTenant) {
                         %>
                     <td style="padding-right: 2px !important;">
                         <nobr>
@@ -289,7 +291,7 @@
 			%>
 			<br/>
 			<font color="red">Maximum log limit exceeded!!!. <br/>
-			
+
 			We only list 40 000 logs through the log viewer(your latest logs will be omitted in the log display), Please download the daily archived logs, for the full log report.
 			</font>	<br/>
 			<%
@@ -338,10 +340,10 @@
                                 </nobr>
                                 </td>
                                 <%
-                                    if(isManager && isSuperTenant) {
+                                    if (isManager && isSuperTenant) {
                                 %>
                                 <td style="padding-right: 2px !important;"><input onkeypress="submitenter(event)"
-                                        value="<%=keyword%>" id="logkeyword"
+                                        value="<%=Encode.forHtmlAttribute(keyword)%>" id="logkeyword"
                                         size="20" type="text"></td>
                                 <td style="padding-right: 2px !important;">
                                     <a
@@ -351,15 +353,16 @@
                                             </a>
                                 </td>
                                 <td><input type="hidden" id="keyWord"
-                                           name="keyword" value="<%=keyword%>" />
+                                           name="keyword" value="<%=Encode.forHtmlAttribute(keyword)%>" />
 
                                 </td>
                                 <%
-                                    } else  if(isManager && !isSuperTenant) {
+                                    } else  if (isManager && !isSuperTenant) {
 
                                 %>
                                 <td style="padding-right: 2px !important;"><input onkeypress="submitenterNormalManager(event)"
-                                                                                  value="<%=keyword%>" id="logkeyword"
+                                                                                  value="<%=Encode.forHtmlAttribute(keyword)%>"
+                                                                                  id="logkeyword"
                                                                                   size="20" type="text"></td>
                                 <td style="padding-right: 2px !important;">
                                     <a
@@ -368,14 +371,15 @@
                                             href="javascript:searchNormalManager()"></a>
                                 </td>
                                 <td><input type="hidden" id="keyWord"
-                                           name="keyword" value="<%=keyword%>" />
+                                           name="keyword" value="<%=Encode.forHtmlAttribute(keyword)%>" />
 
                                 </td>
                                 <%
-                                    } else if(!isManager) {
+                                    } else if (!isManager) {
                                         %>
                                 <td style="padding-right: 2px !important;"><input onkeypress="submitenterNormal(event)"
-                                                                                  value="<%=keyword%>" id="logkeyword"
+                                                                                  value="<%=Encode.forHtmlAttribute(keyword)%>"
+                                                                                  id="logkeyword"
                                                                                   size="20" type="text"></td>
                                 <td style="padding-right: 2px !important;">
                                     <a
@@ -385,7 +389,7 @@
                                             ></a>
                                 </td>
                                 <td><input type="hidden" id="keyWord"
-                                           name="keyword" value="<%=keyword%>" />
+                                           name="keyword" value="<%=Encode.forHtmlAttribute(keyword)%>" />
 
                                 </td>
                                 <td style="width: 37%;"></td>
@@ -406,7 +410,7 @@
                                 %>
 
                             </tr>
-                            
+
                         </table>
                         </td>
                         </tr>
@@ -415,9 +419,9 @@
 
 
                    <br/>
-                  
+
 			<table border="1" class="styledLeft">
-		
+
 				<tbody>
 
 					<tr>
@@ -438,7 +442,7 @@
 									</tr>
 								</thead>
 							<%
-                                if(!isValidTenant) { %>
+                                if (!isValidTenant) { %>
                                 <fmt:message key="invalid.tenant" />
 
                                 <%} else {
@@ -446,7 +450,7 @@
 
 								if (events == null || events.length == 0 || events[0] == null) {
 							%>
-								 <fmt:message key="no.logs" /> 
+								 <fmt:message key="no.logs" />
 							<%
  								} else {
  										int index = 0;
@@ -458,7 +462,7 @@
 									<%
 										} else {
 									%>
-								
+
 								<tr bgcolor="#eeeffb">
 									<%
 										}
@@ -479,7 +483,7 @@
 											id="<%=imgId%>"></a> <fmt:message
 												key="view.stack.trace" /></td>
 								</tr>
-								
+
 							<%
 																String id = "traceTable" + index;
 																			if (index % 2 != 0) {
@@ -488,13 +492,13 @@
 									<%
 										} else {
 									%>
-								
+
 									<tr id="<%=id%>" style="display: none" bgcolor="#eeeffb">
 									<%
 										}
 									%>
-								
-									<td colspan="4" width="100%">TID[<%=logMessage.getTenantId()%>] [<%=logMessage.getServerName()%>] [<%=logMessage.getLogTime()%>] <%=logMessage.getPriority().trim()%> {<%=logMessage.getLogger()%>} - <%=CharacterEncoder.getSafeText(logMessage.getMessage())%> 
+
+									<td colspan="4" width="100%">TID[<%=logMessage.getTenantId()%>] [<%=logMessage.getServerName()%>] [<%=logMessage.getLogTime()%>] <%=logMessage.getPriority().trim()%> {<%=logMessage.getLogger()%>} - <%=CharacterEncoder.getSafeText(logMessage.getMessage())%>
 										<%=logMessage.getStacktrace()%><br/>
 									</td>
 									</tr>
@@ -503,21 +507,21 @@
 									}
                                 }
 							%>
-					
+
 							</table>
 							   <carbon:paginator pageNumber="<%=pageNumber%>" numberOfPages="<%=numberOfPages%>"
                       page="index.jsp" pageNumberParameterName="pageNumber"
                       prevKey="prev" nextKey="next"
-                      parameters="<%= parameter%>"/>
+                      parameters="<%=Encode.forUriComponent(parameter)%>"/>
 					</tr>
-					
-				
+
+
 				<%
 														if (showLogFiles) {
                 %>
 					<tr>
                         <%
-                            if(showMax) {
+                            if (showMax) {
                         %>
 										<td class="middle-header" colspan="2"><a
 											class="icon-link"
@@ -540,14 +544,14 @@
                         %>
 									</tr>
 									    <tr id="propertyTable" style="<%=(showMax) ? "" : "display:none"%>">
-								
-								
+
+
 										<td>
-							
-					
-						           
+
+
+
 			<table border="1" class="styledLeft">
-		
+
 				<tbody>
 
 					<tr>
@@ -571,7 +575,7 @@
 									<%
 										} else {
 									%>
-								
+
 								<tr bgcolor="#eeeffb">
 									<%
 										}
@@ -624,12 +628,12 @@
 							  <carbon:paginator pageNumber="<%=pageIndexNumber%>" numberOfPages="<%=numberOfIndexPages%>"
                       page="index.jsp" pageNumberParameterName="pageIndexNumber"
                       prevKey="prev" nextKey="next"
-                      parameters="<%=indexParameter%>"/>
+                      parameters="<%=Encode.forUriComponent(indexParameter)%>"/>
 						</td>
 					</tr>
-										
+
 									</tbody></table></td></tr>
-										
+
 					<%
 																}
 															%>
